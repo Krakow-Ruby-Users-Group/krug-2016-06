@@ -1,0 +1,281 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>Chewy - Elastic made easy</title>
+
+    <link rel="stylesheet" href="css/font-awesome.css">
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/white.css">
+
+		<!-- Theme used for syntax highlighting of code -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section>
+          <h1>CHEWY<br>Elastic made easy</h1>
+        </section>
+
+        <section>
+          <h2><code>whoami</code></h2>
+          <table>
+            <tr>
+              <td style="vertical-align: middle">
+                <p><i class="fa fa-twitter"></i> bartek_bulat</p>
+                <p><i class="fa fa-instagram"></i> bartek.bulat</p>
+                <p><i class="fa fa-github"></i> barthez</p>
+              </td>
+              <td style="vertical-align: middle; padding-left: 100px">
+                <img src="bartek-small.jpeg" class="plain" height="400px">
+              </td>
+            </tr>
+          </table>
+
+
+        </section>
+
+        <section>
+          <img src="toptal-full.svg" class="plain" />
+
+          <aside class="notes">
+            Toptal - biggest freelancers network<br>
+            We are hiring!<br>
+          </aside>
+        </section>
+
+        <section>
+          <h1>CHEWY<br>Elastic made easy</h1>
+
+          <aside class="notes">
+            Who know: chewy? elastic? lucene? full-test search?<br>
+            Agenda:<br>
+            - What elastic is?<br>
+            - How to use it in webapp<br>
+            - What is Chewy and how it helps<br>
+            - Simple example<br>
+          </aside>
+        </section>
+
+
+				<section>
+          <h2>Elastic features</h2>
+          <table>
+            <tr>
+              <td style="vertical-align: middle">
+                <img src="elastic.svg" class="plain" height="90px" >
+              </td>
+              <td>
+                <p class="fragment">is full-text search engine</p>
+                <p class="fragment">has HTTP web interface</p>
+                <p class="fragment">stores schema-free* JSON documents</p>
+              </td>
+            </tr>
+          </table>
+
+          <p class="fragment"><small>* We need mapping to define types and analizers.</small></p>
+
+          <aside class="notes">
+            1. we can store and search any texts like in google<br/>
+            2. We can store, query, update with curl (and similar)<br/>
+            3. We can store any structure we want
+          </aside>
+        </section>
+
+        <section>
+          <h2>How to use it<br>from our application?</h2>
+          <img src="howto.gif" class="plain" height="300px">
+
+          <aside class="notes">
+            How to connect primary database data to our serchable index<br>
+            ELasticsearch gem - basic wrapper to elastic endpoints
+          </aside>
+        </section>
+
+        <section>
+          <h2>Mapping</h2>
+          <ol>
+            <li class="fragment">What is it?</li>
+            <li class="fragment">Mapping versioning</li>
+            <li class="fragment">Analizers</li>
+          </ol>
+
+          <aside class="notes">
+            mapping is "schema" from regular databases<br />
+            manual reindexing + index switching<br />
+            analizer: filter + tokenizer - how to transform into to index keys
+          </aside>
+        </section>
+
+        <section>
+          <h2>Update index</h2>
+          <ol>
+            <li class="fragment">On every update/in batches</li>
+            <li class="fragment">In request/in background job</li>
+          </ol>
+
+          <aside class="notes">
+            Updating index cause single http request <br>
+            Updating index is always slow<br>
+          </aside>
+        </section>
+
+
+        <section>
+          <h2>Searching</h2>
+          <ol>
+            <li class="fragment">Search input analizer</li>
+            <li class="fragment">Build search json manually</li>
+            <li class="fragment">Map results to primary DB objects</li>
+          </ol>
+
+          <aside class="notes">
+            How to get search keys from search input<br>
+            Query or filter<br>
+            Ok, I got data, how to use it?
+          </aside>
+        </section>
+
+        <section>
+          <h2>Chewy</h2>
+          <img src="chewy.gif" class="plain"><br>
+          <p><img src="Octocat.png" height="40px" class="plain" style="vertical-align: middle">/toptal/chewy</p>
+
+          <aside class="notes">
+            Define mapping and analizers with nice DSL<br>
+            Build in reindex and switch feature<br>
+            Update strategies: every update, atomic, in background job<br />
+            Query/filter builder<br/>
+            Nice integration with AR, Mongoid and Sequel<br>
+            Many, many other features
+          </aside>
+        </section>
+
+        <section>
+          <h2>Typeahead Example</h2>
+          <pre><code data-trim data-noescape>
+class TypeaheadIndex < Chewy::Index
+  settings analysis: {
+    analyzer: {
+      autocomplete_term: {
+        tokenizer: 'autocomplete_edge',
+        filter: %w[lowercase icu_folding]
+      },
+      autocomplete_search: {
+        tokenizer: 'whitespace',
+        filter: %w[lowercase icu_folding]
+      }
+    },
+    tokenizer: { autocomplete_edge: ... }
+  }
+end
+          </code></pre>
+        </section>
+
+        <section>
+          <h2>Typeahead Example</h2>
+          <pre><code data-trim data-noescape>
+class TypeaheadIndex < Chewy::Index
+  settings analysis: {
+    analyzer: { ... },
+    tokenizer: {
+      autocomplete_edge: {
+        type: 'nGram',
+        min_gram: 1,
+        max_gram: 100
+      }
+    }
+end
+          </code></pre>
+        </section>
+
+        <section>
+          <h2>Typeahead Example</h2>
+          <pre><code data-trim data-noescape>
+class TypeaheadIndex < Chewy::Index
+  ...
+
+  define_type(User.select(:id, :name, ...)) do
+    field :name, analizer: 'autocomplete_term'
+    field :tags, index: 'not_analyzed', value: ->(user) {
+      [].tap do |tags|
+        tags << :user
+        tags << :active_user if user.active?
+        tags << :staff if user.staff?
+      end
+    }
+  end
+end
+          </code></pre>
+        </section>
+
+        <section>
+          <h2>Typeahead Example</h2>
+          <pre><code data-trim data-noescape>
+class TypeaheadSearch
+  attr :term, :tag
+
+  def search
+    TypeaheadIndex
+      .filter { tags == o { tag } }
+      .query(
+        match_phrase: {
+          query: term
+          analizer: 'autocomplete_search'
+        }
+      )
+  end
+end
+          </code></pre>
+        </section>
+
+        <section>
+          <h2>Opensource</h2>
+
+          <img src="github-shower.jpg" class="plain" height="400px">
+          <aside class="notes">
+            It is opensource<br>
+            contribute: write docs, resolve issues, review PRs<br/>
+            Follow/Add star
+          </aside>
+        </section>
+
+        <section>
+          <h2>Q &amp; A</h2>
+
+          <img src="questions.gif" class="plain">
+        </section>
+			</div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+			// More info https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				history: true,
+
+				// More info https://github.com/hakimel/reveal.js#dependencies
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+				]
+			});
+		</script>
+	</body>
+</html>
